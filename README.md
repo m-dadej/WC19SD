@@ -2,7 +2,7 @@
 ### Wrapper functions for extracting World COVID-19 World Survey Data gathered by University of Maryland and Facebook
 
 Clone it or use `{r}
-source("https://raw.githubusercontent.com/SquintRook/CWSD/master/api_functions.R")`
+source("https://raw.githubusercontent.com/SquintRook/WC19SD/master/api_functions.R")`
 to import functions to get data.
 
 Documentation of the API is [here](https://covidmap.umd.edu/api.html)
