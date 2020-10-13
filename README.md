@@ -5,6 +5,16 @@ Clone it or use `{r}
 source("https://raw.githubusercontent.com/SquintRook/WC19SD/master/api_functions.R")`
 to import functions to get data.
 
+
+Main function to get survey data:
+```R
+covid_survey(indicator = "mask", 
+             type = "daily",
+             country = "Poland",
+             region = "all", 
+             date_range = "all")
+```
+
 Documentation of the API is [here](https://covidmap.umd.edu/api.html)
 
 Here are some visualizations of the data (in polish tho):
