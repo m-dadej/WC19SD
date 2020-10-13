@@ -8,14 +8,14 @@ to import functions to get data.
 
 Main function to get survey data:
 ```R
-covid_survey(indicator = "mask", 
-             type = "daily",
-             country = "Poland",
-             region = "all", 
-             date_range = "all")
+covid_survey(indicator = "mask",      # or "covid" , "flu" , "mask" ,"contac"t or "finance"
+             type = "daily",          # or "smoothed"
+             country = "Poland",      # "United%" For countries with united in title
+             region = "all",          # or c() in order to get total for a country
+             date_range = "all")      # YYYY-MM-DD
 ```
 
-Documentation of the API is [here](https://covidmap.umd.edu/api.html)
+Documentation of the API along with description of variables is [here](https://covidmap.umd.edu/api.html)
 
 Here are some visualizations of the data (in polish tho):
 
