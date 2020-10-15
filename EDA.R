@@ -5,7 +5,7 @@ library(cowplot)
 library(tidyverse)
 
 #covid , flu , mask ,contact or finance
-caption <- "twitter: @mateusz_dadej | ¬ród³o: COVID-19 World Survey API | ¶rednia dzienna ilo¶æ respondentów to ~ 2000"
+caption <- "Dateusz Madej | ¬ród³o: COVID-19 World Survey API | ¶rednia dzienna ilo¶æ respondentów to ~ 2000"
 
 '%!in%' <- Negate('%in%')
 
@@ -26,11 +26,11 @@ df_covid_total <- covid_survey(indicator = "covid",
                                date_range = "all")
 
 
-cli_plot <- select(df_covid, region, survey_date, percent_cli) %>%
+cli_plot <- select(df_covid, region, survey_date, percent_cli, sample_size) %>%
               filter(region %!in% c("Warmiñsko-Mazurskie", "Lubelskie", "Lubuskie", "Podkarpackie")) %>%
-              pivot_longer(cols = -c(region, survey_date)) %>%
+              pivot_longer(cols = -c(region, survey_date, sample_size)) %>%
                 ggplot(aes(x = survey_date, y = value, color = region )) +
-                geom_point(size = 0.8) +
+                geom_point(size = 1) +
                 geom_smooth(span = 1, alpha = 0.5) +
                 scale_y_continuous(labels = scales::percent) +
                 theme_minimal() +
@@ -38,7 +38,8 @@ cli_plot <- select(df_covid, region, survey_date, percent_cli) %>%
                      caption = caption, x = "", y = "") +
                 scale_colour_viridis_d(option = "D") +
                 facet_wrap(~ region) +
-                theme(plot.margin = unit(c(1,1,1,1), "cm"), legend.position = "none")
+                theme(plot.margin = unit(c(1,1,1,1), "cm")) +
+                guides(colour=FALSE)
 
 
 covid_plot1 <- ggplot(df_covid_total) +

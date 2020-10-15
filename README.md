@@ -1,11 +1,32 @@
 
 ### Wrapper functions for extracting World COVID-19 World Survey Data gathered by University of Maryland and Facebook
 
-Clone it or use `{r}
-source("https://raw.githubusercontent.com/SquintRook/CWSD/master/api_functions.R")`
+Clone it or use
+`source("https://raw.githubusercontent.com/SquintRook/WC19SD/master/api_functions.R")`
 to import functions to get data.
 
-Documentation of the API is [here](https://covidmap.umd.edu/api.html)
+Main function to get survey
+data:
+
+``` r
+covid_survey(indicator = "mask",      # one of "covid" , "flu" , "mask" ,"contact", "finance" or "all"
+             type = "daily",          # or "smoothed"
+             country = "Poland",      # "United%" For countries with united in title
+             region = "all",          # or c() in order to get total for a country
+             date_range = "all")      # YYYY-MM-DD
+```
+
+Function to lookup available dates or
+countries/regions
+
+``` r
+lookup_dates(country = c("Poland", "Pomorskie")) # to get available dates for Pomorskie region of Poland. Format c("country", "region")
+
+lookup_country(region = TRUE) # to get list of available countries and regions if region = TRUE
+```
+
+Documentation of the API along with description of variables is
+[here](https://covidmap.umd.edu/api.html)
 
 Here are some visualizations of the data (in polish tho):
 

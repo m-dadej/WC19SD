@@ -10,17 +10,6 @@ if(any(!(required_packages %in% installed.packages()[,"Package"]))){
 
 library(magrittr)
 
-# miscellaneous function to get data from path - used for further functions
-
-get_from_path <- function(path){
-  
-  httr::GET(path) %>%                                   # request data from api
-    httr::content(as = "text", encoding = "UTF-8") %>%  # make sure the content is encoded with 'UTF-8'
-    jsonlite::fromJSON(flatten = TRUE) %>%              # now we can have a dataframe for use
-    data.frame()
-  
-}
-
 #--------------- lookup_country ---------------
 
 # Function to get available countries and regions
@@ -34,7 +23,10 @@ lookup_country <- function(region = TRUE){
                  "https://covidmap.umd.edu/api/region",
                  "https://covidmap.umd.edu/api/country")
   
-  get_from_path(path)
+  httr::GET(path) %>%                                   # request data from api
+    httr::content(as = "text", encoding = "UTF-8") %>%  # make sure the content is encoded with 'UTF-8'
+    jsonlite::fromJSON(flatten = TRUE) %>%              # now we can have a dataframe for use
+    data.frame()
   
 }
 
@@ -53,7 +45,10 @@ lookup_dates <- function(country){
                  glue::glue("https://covidmap.umd.edu/api/datesavail?country={country}"),
                  glue::glue("https://covidmap.umd.edu/api/datesavail?country={country[1]}&region={country[2]}"))
   
-  get_from_path(path)
+  httr::GET(path) %>%                                   # request data from api
+    httr::content(as = "text", encoding = "UTF-8") %>%  # make sure the content is encoded with 'UTF-8'
+    jsonlite::fromJSON(flatten = TRUE) %>%              # now we can have a dataframe for use
+    data.frame()
 }
 
 #------------------ covid_survey -----------------
@@ -62,7 +57,7 @@ lookup_dates <- function(country){
 
 # Full list of arguments and more on API and its data here: https://covidmap.umd.edu/api.html
 # tl;dr of the arguments:
-# indicator - which data to use e.g. "covid", "flu", "mask", "contact" or "finance"
+# indicator - which data to use e.g. "covid", "flu", "mask", "contact", "finance" or "all"
 # type - "daily" or "smoothed"
 # country - string of a country e.g. "Poland". FOR COUNTRIES WITH WORD "UNITED" USE ONLY "United%" ! (api problem)
 # region - string of region of given country e.g. "Pomorskie" or c() for none
@@ -70,41 +65,84 @@ lookup_dates <- function(country){
 #   b) range of dates in a format like c("2020-04-30", "2020-10-01");
 #   c) "all" for every available date
 
+
 covid_survey <- function(indicator = "covid",
-                         type = "daily", 
-                         country = "all",
-                         region = c(),
-                         date_range = "all"){
+                          type = "daily", 
+                          country = "all",
+                          region = c(),
+                          date_range = "all"){
   
-  # use lookup_dates to get most recent dates if date_range == "all"
-  if (date_range[1] == "all") { 
+  # nested function to get single indicator. (API does not allow many indicators at once)
+  single_indicator <- function(indicator, 
+                               type,
+                               country,
+                               region,
+                               date_range){
     
-    date_path <- "&daterange="
-    date_range <- paste(min(lookup_dates(country)$data.survey_date), "-", max(lookup_dates(country)$data.survey_date), sep = "") 
+    # use lookup_dates to get most recent dates if date_range == "all"
+    if (date_range[1] == "all") { 
+      
+      date_path <- "&daterange="
+      date_range <- paste(min(lookup_dates(country)$data.survey_date), "-", max(lookup_dates(country)$data.survey_date), sep = "") 
+      
+    } else {
+      
+      # change c(yyyy-mm-dd, yyyy-mm-dd) to yyyymmdd-yyyymmdd
+      date_path <- ifelse(length(date_range) == 1, "&date=", "&daterange=")
+      date_range <-  as.Date(date_range) %>% 
+        format("%Y%m%d") %>%
+        ifelse(length(date_range) == 1, ., paste(.[1], "-", .[2], sep = ""))
+    }
     
-  } else {
+    region_path <- ifelse(length(region) == 0, "", paste("&region=", region, sep = ""))
     
-    # change c(yyyy-mm-dd, yyyy-mm-dd) to yyyymmdd-yyyymmdd
-    date_path <- ifelse(length(date_range) == 1, "&date=", "&daterange=")
-    date_range <-  as.Date(date_range) %>% 
-      format("%Y%m%d") %>%
-      ifelse(length(date_range) == 1, ., paste(.[1], "-", .[2], sep = ""))
+    # glue every parts of path
+    path <- glue::glue("https://covidmap.umd.edu/api/resources?indicator={indicator}&type={type}&country={country}{region_path}{date_path}{date_range}")
+    
+    httr::GET(path) %>%                                                       # request data from api
+      httr::content(as = "text", encoding = "UTF-8") %>%                      # make sure the content is encoded with 'UTF-8'
+      jsonlite::fromJSON(flatten = TRUE) %>%                                  # now we can have a dataframe for use
+      data.frame() %>%                                                        # use pre-defined function to connect to extract data
+      dplyr::mutate(data.survey_date = lubridate::ymd(data.survey_date)) %>%  # convert date
+      set_colnames(stringr::str_remove(colnames(.), "data."))                 # remove "data." from column names 
   }
   
-  region_path <- ifelse(length(region) == 0, "", paste("&region=", region, sep = ""))
+  # if indicator = "all" then change it to the vector of every available indicator
+  suppressWarnings(indicator <- if(indicator == "all") c("covid" , "flu" , "mask" ,"contact", "finance") else indicator)
   
-  # glue every parts of path
-  path <- glue::glue("https://covidmap.umd.edu/api/resources?indicator={indicator}&type={type}&country={country}{region_path}{date_path}{date_range}")
+  # get first df (or the only one)
+  df <- single_indicator(indicator = indicator[1], 
+                         type = type,
+                         country = country,
+                         region = region,
+                         date_range = date_range)
   
-  get_from_path(path) %>%                                                   # use pre-defined function to connect to extract data
-    dplyr::mutate(data.survey_date = lubridate::ymd(data.survey_date)) %>%  # convert date
-    set_colnames(stringr::str_remove(colnames(.), "data."))                 # remove "data." from column names 
+  # if there are more indicators specified then loop and merge with single_indicator() nested function
+  if (length(indicator) != 1) {
+    
+    for (indic_loop in indicator[2:length(indicator)]) {
+      
+      # data to merge to the previous one. Also delete some repetitive variables
+      df0 <- single_indicator(indicator = indic_loop, 
+                              type = type,
+                              country = country,
+                              region = region,
+                              date_range = date_range) %>%
+        dplyr::select(-c("gid_0", if(length(region) != 0) {"gid_1"}, "iso_code", "sample_size", "status"))
+      
+      
+      # join these data frames by country, survey date and conditionally by region if specified.
+      # and add indicator name to variables with the same name
+      df <- dplyr::inner_join(df, df0, by = c("country", if(length(region) != 0){"region"}, "survey_date"), 
+                              suffix = c("", glue::glue("_{indic_loop}")))
+      
+    }
+  }
+  
+  # API wrongly names contact's standard error as dc_se, should call it mc_se. 
+  if (indicator[1] == "all" | "contact" %in% indicator) { df <- dplyr::rename(df, "dc_se" = "mc_se_contact") }
+  
+  return(df)
 }
 
 rm(required_packages)
-
-covid_survey(indicator = "mask", 
-             type = "daily",
-             country = "Poland",
-             region = c(),
-             date_range = "all")
